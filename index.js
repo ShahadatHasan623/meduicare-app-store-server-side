@@ -134,6 +134,21 @@ async function run() {
         .toArray();
       res.send(result);
     });
+    app.get("/payments/seller/:email", async (req, res) => {
+      try {
+        const sellerEmail = req.params.email;
+        // sellerEmail অনুযায়ী payments খুঁজবে
+        const payments = await paymentsCollection
+          .find({ sellerEmail })
+          .sort({ date: -1 }) // সাম্প্রতিক পেমেন্ট আগে দেখাবে
+          .toArray();
+
+        res.status(200).send(payments);
+      } catch (error) {
+        console.error("Error fetching seller payments:", error);
+        res.status(500).send({ message: "Internal Server Error" });
+      }
+    });
 
     // ✅ ORDERS ROUTES
     app.post("/orders", async (req, res) => {
