@@ -1,39 +1,49 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
 
-module.exports = (medicinesCollection) => {
+module.exports = (medicineCollection) => {
   const router = express.Router();
 
-  router.post("/", async (req, res) => {
-    const data = req.body;
-    data.status = "available";
-    const result = await medicinesCollection.insertOne(data);
-    res.send(result);
-  });
-
-//   router.get("/", async (req, res) => {
-//     const email = req.query.sellerEmail;
-//     let filter = {};
-
-//     if (email) {
-//       filter = { sellerEmail: email };
-//     }
-
-//     const result = await medicinesCollection.find(filter).toArray();
-//     res.send(result);
-//   });
+  // Get all medicines
   router.get("/", async (req, res) => {
-    const email = req.query.sellerEmail;
-    const result = await medicinesCollection
-      .find({ sellerEmail: email })
-      .toArray();
+    const category = req.query.category;
+    let query = {};
+    if (category) {
+      query = { category: category };
+    }
+    const result = await medicineCollection.find(query).toArray();
     res.send(result);
   });
 
+  // Get single medicine by ID
+  router.get("/:id", async (req, res) => {
+    const id = req.params.id;
+    const medicine = await medicineCollection.findOne({ _id: new ObjectId(id) });
+    res.send(medicine);
+  });
+
+  // Add new medicine
+  router.post("/", async (req, res) => {
+    const medicine = req.body;
+    const result = await medicineCollection.insertOne(medicine);
+    res.send(result);
+  });
+
+  // Update medicine
+  router.patch("/:id", async (req, res) => {
+    const id = req.params.id;
+    const updateData = req.body;
+    const result = await medicineCollection.updateOne(
+      { _id: new ObjectId(id) },
+      { $set: updateData }
+    );
+    res.send(result);
+  });
+
+  // Delete medicine
   router.delete("/:id", async (req, res) => {
-    const result = await medicinesCollection.deleteOne({
-      _id: new ObjectId(req.params.id),
-    });
+    const id = req.params.id;
+    const result = await medicineCollection.deleteOne({ _id: new ObjectId(id) });
     res.send(result);
   });
 
