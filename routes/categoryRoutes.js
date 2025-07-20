@@ -5,6 +5,7 @@ module.exports = (categoryCollection, medicineCollection) => {
   const router = express.Router();
   const DEFAULT_IMAGE = "https://i.ibb.co/default-category.png";
 
+  // ---------- Get All Categories ----------
   router.get("/", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit) || 0;
@@ -19,13 +20,14 @@ module.exports = (categoryCollection, medicineCollection) => {
     }
   });
 
+  // ---------- Get Categories with Medicine Count ----------
   router.get("/with-count", async (req, res) => {
     try {
       const categories = await categoryCollection.find().toArray();
       const data = await Promise.all(
         categories.map(async (cat) => {
           const count = await medicineCollection.countDocuments({
-            category: cat.categoryName,
+            category: cat.categoryName.toLowerCase(),
           });
           return {
             _id: cat._id,
@@ -44,6 +46,7 @@ module.exports = (categoryCollection, medicineCollection) => {
     }
   });
 
+  // ---------- Get Medicines by CategoryId ----------
   router.get("/:categoryId/medicines", async (req, res) => {
     try {
       const { categoryId } = req.params;
@@ -57,7 +60,7 @@ module.exports = (categoryCollection, medicineCollection) => {
         return res.status(404).send({ message: "Category not found" });
       }
       const medicines = await medicineCollection
-        .find({ category: category.categoryName })
+        .find({ category: category.categoryName.toLowerCase() })
         .toArray();
       res.send({ category, medicines });
     } catch (err) {
@@ -68,12 +71,18 @@ module.exports = (categoryCollection, medicineCollection) => {
     }
   });
 
+  // ---------- Create New Category ----------
   router.post("/", async (req, res) => {
-    const query = req.body;
-    const result = await categoryCollection.insertOne(query);
-    res.send(result);
+    try {
+      const query = req.body;
+      const result = await categoryCollection.insertOne(query);
+      res.send(result);
+    } catch (err) {
+      res.status(500).send({ message: "Failed to create category", error: err.message });
+    }
   });
 
+  // ---------- Update Category ----------
   router.patch("/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -81,9 +90,7 @@ module.exports = (categoryCollection, medicineCollection) => {
         return res.status(400).send({ message: "Invalid category ID" });
       }
 
-      const existing = await categoryCollection.findOne({
-        _id: new ObjectId(id),
-      });
+      const existing = await categoryCollection.findOne({ _id: new ObjectId(id) });
       if (!existing) {
         return res.status(404).send({ message: "Category not found" });
       }
@@ -99,11 +106,11 @@ module.exports = (categoryCollection, medicineCollection) => {
         { $set: updateData }
       );
 
-      // OPTIONAL: cascade rename in medicines
+      // Cascade rename in medicines if categoryName changed
       if (categoryName && medicineCollection) {
         await medicineCollection.updateMany(
-          { category: existing.categoryName },
-          { $set: { category: categoryName.trim() } }
+          { category: existing.categoryName.toLowerCase() },
+          { $set: { category: categoryName.trim().toLowerCase() } }
         );
       }
 
@@ -112,12 +119,11 @@ module.exports = (categoryCollection, medicineCollection) => {
         modifiedCount: result.modifiedCount,
       });
     } catch (err) {
-      res
-        .status(500)
-        .send({ message: "Failed to update category", error: err.message });
+      res.status(500).send({ message: "Failed to update category", error: err.message });
     }
   });
 
+  // ---------- Delete Category ----------
   router.delete("/:id", async (req, res) => {
     try {
       const { id } = req.params;
@@ -132,29 +138,8 @@ module.exports = (categoryCollection, medicineCollection) => {
       }
       res.send({ message: "Category deleted successfully" });
     } catch (err) {
-      res
-        .status(500)
-        .send({ message: "Failed to delete category", error: err.message });
+      res.status(500).send({ message: "Failed to delete category", error: err.message });
     }
-  });
-
-  router.get("/:categoryId/medicines", async (req, res) => {
-    const { categoryId } = req.params;
-    if (!ObjectId.isValid(categoryId)) {
-      return res.status(400).send({ message: "Invalid category ID" });
-    }
-
-    const category = await categoryCollection.findOne({
-      _id: new ObjectId(categoryId),
-    });
-    if (!category) {
-      return res.status(404).send({ message: "Category not found" });
-    }
-
-    const medicines = await medicineCollection
-      .find({ category: category.categoryName })
-      .toArray();
-    res.send({ category, medicines });
   });
 
   return router;
