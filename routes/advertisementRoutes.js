@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { ObjectId } = require("mongodb");
+const verifyFBtoken = require("../verifyFBtoken/midleware/verifyFBtoken");
 
 // inject advertisementsCollection from main server file when using this route
 module.exports = (advertisementsCollection) => {
@@ -20,7 +21,7 @@ module.exports = (advertisementsCollection) => {
   });
 
   // Seller: Add new advertisement request
-  router.post("/seller/add", async (req, res) => {
+  router.post("/seller/add",verifyFBtoken, async (req, res) => {
     try {
       const { medicineName, medicineImage, description, sellerEmail } = req.body;
 
@@ -34,7 +35,7 @@ module.exports = (advertisementsCollection) => {
         description,
         sellerEmail,
         isOnSlider: false,
-        createdAt: new Date(),  // ভালো অভ্যাস হিসেবে যোগ করতে পারো
+        createdAt: new Date(),  
       };
 
       const result = await advertisementsCollection.insertOne(newAd);
@@ -49,7 +50,7 @@ module.exports = (advertisementsCollection) => {
   });
 
   // Admin: Get all advertisements
-  router.get("/admin/all", async (req, res) => {
+  router.get("/admin/all",verifyFBtoken, async (req, res) => {
     try {
       const ads = await advertisementsCollection.find({}).toArray();
       res.json(ads);

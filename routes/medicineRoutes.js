@@ -1,10 +1,11 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyFBtoken = require("../verifyFBtoken/midleware/verifyFBtoken");
 
 module.exports = (medicineCollection) => {
   const router = express.Router();
 
-  router.get("/", async (req, res) => {
+  router.get("/",verifyFBtoken, async (req, res) => {
     try {
       const category = req.query.category;
       const page = parseInt(req.query.page) || 1;
@@ -59,7 +60,7 @@ module.exports = (medicineCollection) => {
   });
 
   // Add new medicine
-  router.post("/", async (req, res) => {
+  router.post("/",verifyFBtoken, async (req, res) => {
     const medicine = req.body;
     const result = await medicineCollection.insertOne(medicine);
     res.send(result);

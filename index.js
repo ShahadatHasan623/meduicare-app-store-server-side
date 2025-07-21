@@ -3,7 +3,6 @@ const cors = require("cors");
 const { MongoClient, ServerApiVersion } = require("mongodb");
 require("dotenv").config();
 const stripe = require("stripe")(process.env.Pyment_GateWay);
-
 const app = express();
 const port = process.env.PORT || 5000;
 
@@ -25,16 +24,14 @@ const client = new MongoClient(uri, {
 const userRoutes = require("./routes/userRoutes");
 const medicineRoutes = require("./routes/medicineRoutes");
 const advertisementRoutes = require("./routes/advertisementRoutes");
-const categoryRoutes = require("./routes/categoryRoutes"); 
+const categoryRoutes = require("./routes/categoryRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
 
 async function run() {
   try {
-    await client.connect();
+    // await client.connect();
 
     const db = client.db("medicineDB");
-
-    // ✅ Collections
     const usersCollection = db.collection("users");
     const medicinesCollection = db.collection("medicines");
     const advertisementsCollection = db.collection("advertisements");
@@ -67,10 +64,16 @@ async function run() {
     // ✅ Use Routes
     app.use("/users", userRoutes(usersCollection));
     app.use("/medicines", medicineRoutes(medicinesCollection));
-    app.use("/advertisements", advertisementRoutes(advertisementsCollection, medicinesCollection));
-    app.use("/categories", categoryRoutes(categoryCollection, medicinesCollection));
+    app.use(
+      "/advertisements",
+      advertisementRoutes(advertisementsCollection, medicinesCollection)
+    );
+    app.use(
+      "/categories",
+      categoryRoutes(categoryCollection, medicinesCollection)
+    );
 
-    app.use("/payments", paymentRoutes(paymentsCollection,usersCollection));
+    app.use("/payments", paymentRoutes(paymentsCollection, usersCollection));
 
     console.log("✅ Connected to MongoDB and routes set");
   } catch (err) {

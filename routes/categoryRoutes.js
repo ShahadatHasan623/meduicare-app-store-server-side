@@ -1,5 +1,6 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyFBtoken = require("../verifyFBtoken/midleware/verifyFBtoken");
 
 module.exports = (categoryCollection, medicineCollection) => {
   const router = express.Router();
@@ -49,7 +50,7 @@ module.exports = (categoryCollection, medicineCollection) => {
   });
 
   // ---------- Get Medicines by CategoryId ----------
-  router.get("/:categoryId/medicines", async (req, res) => {
+  router.get("/:categoryId/medicines",verifyFBtoken, async (req, res) => {
     try {
       const { categoryId } = req.params;
       if (!ObjectId.isValid(categoryId)) {
@@ -76,7 +77,7 @@ module.exports = (categoryCollection, medicineCollection) => {
   });
 
   // ---------- Create New Category ----------
-  router.post("/", async (req, res) => {
+  router.post("/",verifyFBtoken, async (req, res) => {
     try {
       const query = req.body;
       const result = await categoryCollection.insertOne(query);

@@ -1,11 +1,12 @@
 const express = require("express");
 const { ObjectId } = require("mongodb");
+const verifyFBtoken = require("../verifyFBtoken/midleware/verifyFBtoken");
 
 module.exports = (paymentsCollection) => {
   const router = express.Router();
 
   /** ---------- Create Payment ---------- **/
-  router.post("/", async (req, res) => {
+  router.post("/",verifyFBtoken, async (req, res) => {
     try {
       let { buyerEmail, transactionId, totalPrice, cartItems, status } =
         req.body;
@@ -112,7 +113,7 @@ module.exports = (paymentsCollection) => {
   });
 
   /** ---------- Get ALL Payments (Admin) ---------- **/
-  router.get("/", async (_req, res) => {
+  router.get("/",verifyFBtoken, async (_req, res) => {
     try {
       const payments = await paymentsCollection
         .find()
@@ -191,7 +192,7 @@ module.exports = (paymentsCollection) => {
   });
 
   /** ---------- Get Seller Payments ---------- **/
-  router.get("/seller/:email", async (req, res) => {
+  router.get("/seller/:email",verifyFBtoken, async (req, res) => {
     try {
       const email = req.params.email.toLowerCase().trim();
 
