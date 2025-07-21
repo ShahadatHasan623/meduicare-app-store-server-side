@@ -4,16 +4,37 @@ const { ObjectId } = require("mongodb");
 module.exports = (medicineCollection) => {
   const router = express.Router();
 
-  // Get all medicines
   router.get("/", async (req, res) => {
-    const category = req.query.category;
-    let query = {};
-    if (category) {
-      query = { category: category };
+    try {
+      const category = req.query.category;
+      const page = parseInt(req.query.page) || 1;
+      const limit = parseInt(req.query.limit) || 10;
+      const skip = (page - 1) * limit;
+
+      let query = {};
+      if (category) {
+        query.category = category;
+      }
+
+      const totalItems = await medicineCollection.countDocuments(query);
+      const data = await medicineCollection
+        .find(query)
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      res.send({
+        data,
+        currentPage: page,
+        totalPages: Math.ceil(totalItems / limit),
+        totalItems,
+      });
+    } catch (error) {
+      console.error("Failed to fetch medicines:", error);
+      res.status(500).send({ message: "Failed to fetch medicines" });
     }
-    const result = await medicineCollection.find(query).toArray();
-    res.send(result);
-  }); 
+  });
+
   // -------- Get Discounted Medicines --------
   router.get("/discounted", async (req, res) => {
     try {
