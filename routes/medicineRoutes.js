@@ -5,7 +5,7 @@ const verifyFBtoken = require("../verifyFBtoken/midleware/verifyFBtoken");
 module.exports = (medicineCollection) => {
   const router = express.Router();
 
-  router.get("/",verifyFBtoken, async (req, res) => {
+  router.get("/", async (req, res) => {
     try {
       const category = req.query.category;
       const page = parseInt(req.query.page) || 1;

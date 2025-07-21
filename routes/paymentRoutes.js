@@ -47,7 +47,7 @@ module.exports = (paymentsCollection) => {
   });
 
   /** ---------- Get Payment Report (Keep Before :id) ---------- **/
-  router.get("/report", async (req, res) => {
+  router.get("/report",verifyFBtoken, async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
       const filter = {};

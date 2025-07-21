@@ -50,7 +50,7 @@ module.exports = (categoryCollection, medicineCollection) => {
   });
 
   // ---------- Get Medicines by CategoryId ----------
-  router.get("/:categoryId/medicines",verifyFBtoken, async (req, res) => {
+  router.get("/:categoryId/medicines",async (req, res) => {
     try {
       const { categoryId } = req.params;
       if (!ObjectId.isValid(categoryId)) {
