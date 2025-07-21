@@ -27,11 +27,13 @@ module.exports = (categoryCollection, medicineCollection) => {
       const data = await Promise.all(
         categories.map(async (cat) => {
           const count = await medicineCollection.countDocuments({
-            category: cat.categoryName.toLowerCase(),
+            category: { $regex: `^${cat.categoryName}$`, $options: "i" },
           });
           return {
             _id: cat._id,
-            categoryName: cat.categoryName,
+            categoryName: cat.categoryName, // Original
+            categoryNameUpper: cat.categoryName.toUpperCase(), // Uppercase
+            categoryNameLower: cat.categoryName.toLowerCase(), // Lowercase
             image: cat.image || DEFAULT_IMAGE,
             medicineCount: count,
           };
@@ -60,7 +62,9 @@ module.exports = (categoryCollection, medicineCollection) => {
         return res.status(404).send({ message: "Category not found" });
       }
       const medicines = await medicineCollection
-        .find({ category: category.categoryName.toLowerCase() })
+        .find({
+          category: { $regex: `^${category.categoryName}$`, $options: "i" },
+        })
         .toArray();
       res.send({ category, medicines });
     } catch (err) {
@@ -78,7 +82,9 @@ module.exports = (categoryCollection, medicineCollection) => {
       const result = await categoryCollection.insertOne(query);
       res.send(result);
     } catch (err) {
-      res.status(500).send({ message: "Failed to create category", error: err.message });
+      res
+        .status(500)
+        .send({ message: "Failed to create category", error: err.message });
     }
   });
 
@@ -90,7 +96,9 @@ module.exports = (categoryCollection, medicineCollection) => {
         return res.status(400).send({ message: "Invalid category ID" });
       }
 
-      const existing = await categoryCollection.findOne({ _id: new ObjectId(id) });
+      const existing = await categoryCollection.findOne({
+        _id: new ObjectId(id),
+      });
       if (!existing) {
         return res.status(404).send({ message: "Category not found" });
       }
@@ -119,7 +127,9 @@ module.exports = (categoryCollection, medicineCollection) => {
         modifiedCount: result.modifiedCount,
       });
     } catch (err) {
-      res.status(500).send({ message: "Failed to update category", error: err.message });
+      res
+        .status(500)
+        .send({ message: "Failed to update category", error: err.message });
     }
   });
 
@@ -138,7 +148,9 @@ module.exports = (categoryCollection, medicineCollection) => {
       }
       res.send({ message: "Category deleted successfully" });
     } catch (err) {
-      res.status(500).send({ message: "Failed to delete category", error: err.message });
+      res
+        .status(500)
+        .send({ message: "Failed to delete category", error: err.message });
     }
   });
 

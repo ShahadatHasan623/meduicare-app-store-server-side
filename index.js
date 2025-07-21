@@ -70,7 +70,7 @@ async function run() {
     app.use("/advertisements", advertisementRoutes(advertisementsCollection, medicinesCollection));
     app.use("/categories", categoryRoutes(categoryCollection, medicinesCollection));
 
-    app.use("/payments", paymentRoutes(paymentsCollection));
+    app.use("/payments", paymentRoutes(paymentsCollection,usersCollection));
 
     console.log("✅ Connected to MongoDB and routes set");
   } catch (err) {

@@ -4,6 +4,7 @@ const { ObjectId } = require("mongodb");
 module.exports = (paymentsCollection) => {
   const router = express.Router();
 
+  /** ---------- Create Payment ---------- **/
   router.post("/", async (req, res) => {
     try {
       let { buyerEmail, transactionId, totalPrice, cartItems, status } =
@@ -20,7 +21,6 @@ module.exports = (paymentsCollection) => {
         return res.status(400).send({ message: "Invalid totalPrice" });
       }
 
-      // Set default status if not provided
       status = status || "pending";
 
       const payment = {
@@ -42,6 +42,48 @@ module.exports = (paymentsCollection) => {
     } catch (error) {
       console.error("Error creating payment:", error);
       res.status(500).send({ message: "Failed to save payment", error });
+    }
+  });
+
+  /** ---------- Get Payment Report (Keep Before :id) ---------- **/
+  router.get("/report", async (req, res) => {
+    try {
+      const { startDate, endDate } = req.query;
+      const filter = {};
+
+      if (startDate && endDate) {
+        filter.date = {
+          $gte: new Date(startDate),
+          $lte: new Date(endDate),
+        };
+      }
+
+      const payments = await paymentsCollection
+        .find(filter)
+        .sort({ date: -1 })
+        .toArray();
+
+      const salesData = [];
+      payments.forEach((payment) => {
+        (payment.cartItems || []).forEach((item) => {
+          salesData.push({
+            paymentId: payment._id,
+            medicineName: item.name,
+            sellerEmail: item.sellerEmail,
+            buyerEmail: payment.buyerEmail,
+            quantity: item.quantity || 1,
+            unitPrice: item.unitPrice || 0,
+            totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
+            status: payment.status,
+            date: payment.date,
+          });
+        });
+      });
+
+      res.send(salesData);
+    } catch (error) {
+      console.error("Error fetching payment report:", error);
+      res.status(500).send({ message: "Failed to fetch report", error });
     }
   });
 
@@ -126,11 +168,32 @@ module.exports = (paymentsCollection) => {
     }
   });
 
+  /** ---------- Payment by ID (Keep at Last) ---------- **/
+  router.get("/:id", async (req, res) => {
+    try {
+      const id = req.params.id;
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({ error: "Invalid payment ID" });
+      }
+
+      const payment = await paymentsCollection.findOne({
+        _id: new ObjectId(id),
+      });
+      if (!payment) {
+        return res.status(404).json({ error: "Payment not found" });
+      }
+
+      res.json(payment);
+    } catch (error) {
+      console.error("Payment GET error:", error);
+      res.status(500).json({ error: "Internal Server Error" });
+    }
+  });
+
   /** ---------- Get Seller Payments ---------- **/
   router.get("/seller/:email", async (req, res) => {
     try {
-      const email = req.params.email.toLowerCase();
-      console.log("Fetching payments for seller:", email);
+      const email = req.params.email.toLowerCase().trim();
 
       const payments = await paymentsCollection
         .find({ "cartItems.sellerEmail": email })
@@ -140,20 +203,23 @@ module.exports = (paymentsCollection) => {
       const sellerItems = [];
       payments.forEach((payment) => {
         (payment.cartItems || []).forEach((item) => {
-          if (item.sellerEmail.toLowerCase() === email) {
+          if ((item.sellerEmail || "").toLowerCase().trim() === email) {
             sellerItems.push({
               _id: payment._id,
-              medicineName: item.name,
+              transactionId: payment.transactionId || "N/A",
+              medicineName: item.name || "Unnamed",
               buyerEmail: payment.buyerEmail,
-              amount: (item.quantity || 0) * (item.unitPrice || 0),
-              status: payment.status === "pending" ? "unpaid" : payment.status,
+              quantity: item.quantity || 1,
+              unitPrice: item.unitPrice || 0,
+              totalAmount: (item.quantity || 1) * (item.unitPrice || 0),
+              status: payment.status || "pending",
               date: payment.date,
             });
           }
         });
       });
 
-      res.send(sellerItems);
+      res.status(200).send(sellerItems);
     } catch (error) {
       console.error("Error fetching seller payments:", error);
       res
@@ -166,11 +232,6 @@ module.exports = (paymentsCollection) => {
   router.get("/summary/admin", async (_req, res) => {
     try {
       const allPayments = await paymentsCollection.find().toArray();
-
-      console.log(
-        "All payments status list:",
-        allPayments.map((p) => p.status)
-      );
 
       const paidTotal = allPayments
         .filter((p) => (p.status || "").toLowerCase() === "paid")
@@ -195,7 +256,6 @@ module.exports = (paymentsCollection) => {
     try {
       const email = req.params.email.toLowerCase();
 
-      // sellerEmail সহ payment গুলো নিয়ে আসছি
       const sellerPayments = await paymentsCollection
         .find({ "cartItems.sellerEmail": email })
         .toArray();
@@ -207,8 +267,6 @@ module.exports = (paymentsCollection) => {
         (payment.cartItems || []).forEach((item) => {
           if ((item.sellerEmail || "").toLowerCase() === email) {
             const itemTotal = (item.quantity || 0) * (item.unitPrice || 0);
-
-            // payment status lowercase করে চেক করছি
             const status = (payment.status || "").toLowerCase();
 
             if (status === "paid") {
@@ -226,48 +284,6 @@ module.exports = (paymentsCollection) => {
       res
         .status(500)
         .send({ message: "Failed to fetch seller summary", error });
-    }
-  });
-
-  /** ---------- Report By Date Range ---------- **/
-  router.get("/report", async (req, res) => {
-    try {
-      const { startDate, endDate } = req.query;
-      const filter = {};
-
-      if (startDate && endDate) {
-        filter.date = {
-          $gte: new Date(startDate),
-          $lte: new Date(endDate),
-        };
-      }
-
-      const payments = await paymentsCollection
-        .find(filter)
-        .sort({ date: -1 })
-        .toArray();
-
-      const salesData = [];
-      payments.forEach((payment) => {
-        (payment.cartItems || []).forEach((item) => {
-          salesData.push({
-            paymentId: payment._id,
-            medicineName: item.name,
-            sellerEmail: item.sellerEmail,
-            buyerEmail: payment.buyerEmail,
-            quantity: item.quantity || 1,
-            unitPrice: item.unitPrice || 0,
-            totalPrice: (item.quantity || 1) * (item.unitPrice || 0),
-            status: payment.status,
-            date: payment.date,
-          });
-        });
-      });
-
-      res.send(salesData);
-    } catch (error) {
-      console.error("Error fetching payment report:", error);
-      res.status(500).send({ message: "Failed to fetch report", error });
     }
   });
 

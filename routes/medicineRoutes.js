@@ -13,12 +13,27 @@ module.exports = (medicineCollection) => {
     }
     const result = await medicineCollection.find(query).toArray();
     res.send(result);
+  }); 
+  // -------- Get Discounted Medicines --------
+  router.get("/discounted", async (req, res) => {
+    try {
+      const discounted = await medicineCollection
+        .find({ discount: { $gt: 0 } }) // discount > 0
+        .toArray();
+      res.send(discounted);
+    } catch (error) {
+      res
+        .status(500)
+        .send({ message: "Failed to fetch discount products", error });
+    }
   });
 
   // Get single medicine by ID
   router.get("/:id", async (req, res) => {
     const id = req.params.id;
-    const medicine = await medicineCollection.findOne({ _id: new ObjectId(id) });
+    const medicine = await medicineCollection.findOne({
+      _id: new ObjectId(id),
+    });
     res.send(medicine);
   });
 
@@ -43,9 +58,10 @@ module.exports = (medicineCollection) => {
   // Delete medicine
   router.delete("/:id", async (req, res) => {
     const id = req.params.id;
-    const result = await medicineCollection.deleteOne({ _id: new ObjectId(id) });
+    const result = await medicineCollection.deleteOne({
+      _id: new ObjectId(id),
+    });
     res.send(result);
   });
-
   return router;
 };
