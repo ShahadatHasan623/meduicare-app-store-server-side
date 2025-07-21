@@ -6,7 +6,7 @@ const verifyFBtoken = require("../verifyFBtoken/midleware/verifyFBtoken");
 // inject advertisementsCollection from main server file when using this route
 module.exports = (advertisementsCollection) => {
   // Seller: Get all medicines referred by this seller
-  router.get("/seller/:sellerEmail", async (req, res) => {
+  router.get("/seller/:sellerEmail",verifyFBtoken, async (req, res) => {
     try {
       const { sellerEmail } = req.params;
       if (!sellerEmail) {
