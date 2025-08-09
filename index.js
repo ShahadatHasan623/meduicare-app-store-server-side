@@ -20,7 +20,7 @@ const client = new MongoClient(uri, {
   },
 });
 
-// ✅ Import Routes
+//  Import Routes
 const userRoutes = require("./routes/userRoutes");
 const medicineRoutes = require("./routes/medicineRoutes");
 const advertisementRoutes = require("./routes/advertisementRoutes");
@@ -38,7 +38,7 @@ async function run() {
     const paymentsCollection = db.collection("payments");
     const categoryCollection = db.collection("categories");
 
-    // ✅ Stripe Payment Intent API
+    //  Stripe Payment Intent API
     app.post("/create-payment-intent", async (req, res) => {
       try {
         const { amount } = req.body;
