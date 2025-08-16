@@ -26,6 +26,8 @@ const medicineRoutes = require("./routes/medicineRoutes");
 const advertisementRoutes = require("./routes/advertisementRoutes");
 const categoryRoutes = require("./routes/categoryRoutes");
 const paymentRoutes = require("./routes/paymentRoutes");
+const newsletterRoutes = require("./routes/newsletter");
+const faqRoutes = require("./routes/faqRoutes");
 
 async function run() {
   try {
@@ -37,7 +39,9 @@ async function run() {
     const advertisementsCollection = db.collection("advertisements");
     const paymentsCollection = db.collection("payments");
     const categoryCollection = db.collection("categories");
-
+    const faqCollection = db.collection("faqs");
+    app.use("/faqs", faqRoutes(faqCollection));
+    app.use("/newsletter", newsletterRoutes(db));
     //  Stripe Payment Intent API
     app.post("/create-payment-intent", async (req, res) => {
       try {
