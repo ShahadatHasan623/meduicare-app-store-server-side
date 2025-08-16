@@ -50,7 +50,7 @@ module.exports = (categoryCollection, medicineCollection) => {
   });
 
   // ---------- Get Medicines by CategoryId ----------
-  router.get("/:categoryId/medicines",async (req, res) => {
+  router.get("/:categoryId/medicines", async (req, res) => {
     try {
       const { categoryId } = req.params;
       if (!ObjectId.isValid(categoryId)) {
@@ -77,7 +77,7 @@ module.exports = (categoryCollection, medicineCollection) => {
   });
 
   // ---------- Create New Category ----------
-  router.post("/",verifyFBtoken, async (req, res) => {
+  router.post("/", verifyFBtoken, async (req, res) => {
     try {
       const query = req.body;
       const result = await categoryCollection.insertOne(query);
@@ -152,6 +152,20 @@ module.exports = (categoryCollection, medicineCollection) => {
       res
         .status(500)
         .send({ message: "Failed to delete category", error: err.message });
+    }
+  });
+  // ---------- Get All Promotional Medicines ----------
+  router.get("/promotions/all", async (req, res) => {
+    try {
+      const promotions = await medicineCollection
+        .find({ isPromotion: "true" })
+        .toArray();
+      res.send(promotions);
+    } catch (err) {
+      res.status(500).send({
+        message: "Failed to fetch promotions",
+        error: err.message,
+      });
     }
   });
 
