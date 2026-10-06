@@ -6,7 +6,7 @@ module.exports = (paymentsCollection) => {
   const router = express.Router();
 
   /** ---------- Create Payment ---------- **/
-  router.post("/",verifyFBtoken, async (req, res) => {
+  router.post("/", verifyFBtoken, async (req, res) => {
     try {
       let { buyerEmail, transactionId, totalPrice, cartItems, status } =
         req.body;
@@ -47,7 +47,7 @@ module.exports = (paymentsCollection) => {
   });
 
   /** ---------- Get Payment Report (Keep Before :id) ---------- **/
-  router.get("/report",verifyFBtoken, async (req, res) => {
+  router.get("/report", verifyFBtoken, async (req, res) => {
     try {
       const { startDate, endDate } = req.query;
       const filter = {};
@@ -113,7 +113,7 @@ module.exports = (paymentsCollection) => {
   });
 
   /** ---------- Get ALL Payments (Admin) ---------- **/
-  router.get("/",verifyFBtoken, async (_req, res) => {
+  router.get("/", verifyFBtoken, async (_req, res) => {
     try {
       const payments = await paymentsCollection
         .find()
@@ -132,6 +132,46 @@ module.exports = (paymentsCollection) => {
     } catch (error) {
       console.error("Error fetching payments:", error);
       res.status(500).send({ message: "Server error", error });
+    }
+  });
+  // Seller payments
+  router.get("/seller/:email", verifyFBtoken, async (req, res) => {
+    try {
+      const email = req.params.email.toLowerCase().trim();
+
+      const payments = await paymentsCollection
+        .find({ "cartItems.sellerEmail": email })
+        .sort({ date: -1 })
+        .toArray();
+
+      const sellerItems = [];
+
+      payments.forEach((payment) => {
+        (payment.cartItems || []).forEach((item) => {
+          if ((item.sellerEmail || "").toLowerCase().trim() === email) {
+            sellerItems.push({
+              _id: payment._id,
+              transactionId: payment.transactionId || "N/A",
+              medicineName: item.name || "Unnamed",
+              buyerEmail: payment.buyerEmail,
+              quantity: item.quantity || 1,
+              unitPrice: item.unitPrice || 0,
+              totalAmount: (item.quantity || 1) * (item.unitPrice || 0),
+              status: payment.status || "pending",
+              date: payment.date,
+            });
+          }
+        });
+      });
+
+      res.status(200).send(sellerItems);
+    } catch (error) {
+      console.error("Error fetching seller payments:", error);
+
+      res.status(500).send({
+        message: "Failed to fetch seller payments",
+        error: error.message,
+      });
     }
   });
 
@@ -192,40 +232,35 @@ module.exports = (paymentsCollection) => {
   });
 
   /** ---------- Get Seller Payments ---------- **/
-  router.get("/seller/:email",verifyFBtoken, async (req, res) => {
+
+  // Payment by ID
+  router.get("/:id", async (req, res) => {
     try {
-      const email = req.params.email.toLowerCase().trim();
+      const id = req.params.id;
 
-      const payments = await paymentsCollection
-        .find({ "cartItems.sellerEmail": email })
-        .sort({ date: -1 })
-        .toArray();
-
-      const sellerItems = [];
-      payments.forEach((payment) => {
-        (payment.cartItems || []).forEach((item) => {
-          if ((item.sellerEmail || "").toLowerCase().trim() === email) {
-            sellerItems.push({
-              _id: payment._id,
-              transactionId: payment.transactionId || "N/A",
-              medicineName: item.name || "Unnamed",
-              buyerEmail: payment.buyerEmail,
-              quantity: item.quantity || 1,
-              unitPrice: item.unitPrice || 0,
-              totalAmount: (item.quantity || 1) * (item.unitPrice || 0),
-              status: payment.status || "pending",
-              date: payment.date,
-            });
-          }
+      if (!ObjectId.isValid(id)) {
+        return res.status(400).json({
+          error: "Invalid payment ID",
         });
+      }
+
+      const payment = await paymentsCollection.findOne({
+        _id: new ObjectId(id),
       });
 
-      res.status(200).send(sellerItems);
+      if (!payment) {
+        return res.status(404).json({
+          error: "Payment not found",
+        });
+      }
+
+      res.json(payment);
     } catch (error) {
-      console.error("Error fetching seller payments:", error);
-      res
-        .status(500)
-        .send({ message: "Failed to fetch seller payments", error });
+      console.error("Payment GET error:", error);
+
+      res.status(500).json({
+        error: "Internal Server Error",
+      });
     }
   });
 
